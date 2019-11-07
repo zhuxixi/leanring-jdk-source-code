@@ -58,18 +58,20 @@ public class FutureTask<V> implements RunnableFuture<V> {
     private static final int INTERRUPTING = 5;
     private static final int INTERRUPTED  = 6;
 
-    /** The underlying callable; nulled out after running */
+    /** Callable引用，run方法执行完毕后会置为null */
     private Callable<V> callable;
-    /** The result to return or exception to throw from get() */
-    private Object outcome; // non-volatile, protected by state reads/writes
-    /** The thread running the callable; CASed during run() */
+
+    /** 任务的执行结果，可能是结果，也可能是一个异常，get方法会get到 */
+    private Object outcome;
+
+    /** 用来执行任务的线程引用 */
     private volatile Thread runner;
-    /** Treiber stack of waiting threads */
+
+    /** 等待线程的堆栈，如果这个任务很多个线程都要调用get方法获取结果，那么计算完毕之前会在这里等待 */
     private volatile WaitNode waiters;
 
     /**
-     * Returns result or throws exception for completed task.
-     *
+     * 返回结果或者抛出异常
      * @param s completed state value
      */
     @SuppressWarnings("unchecked")
@@ -82,37 +84,25 @@ public class FutureTask<V> implements RunnableFuture<V> {
         throw new ExecutionException((Throwable)x);
     }
 
+
     /**
-     * Creates a {@code FutureTask} that will, upon running, execute the
-     * given {@code Callable}.
-     *
-     * @param  callable the callable task
-     * @throws NullPointerException if the callable is null
+     * 构造方法
      */
     public FutureTask(Callable<V> callable) {
         if (callable == null)
             throw new NullPointerException();
         this.callable = callable;
-        this.state = NEW;       // ensure visibility of callable
+        this.state = NEW;       
     }
 
     /**
-     * Creates a {@code FutureTask} that will, upon running, execute the
-     * given {@code Runnable}, and arrange that {@code get} will return the
-     * given result on successful completion.
-     *
-     * @param runnable the runnable task
-     * @param result the result to return on successful completion. If
-     * you don't need a particular result, consider using
-     * constructions of the form:
-     * {@code Future<?> f = new FutureTask<Void>(runnable, null)}
-     * @throws NullPointerException if the runnable is null
+     * 构造方法
      */
     public FutureTask(Runnable runnable, V result) {
         this.callable = Executors.callable(runnable, result);
         this.state = NEW;       // ensure visibility of callable
     }
-
+    
     public boolean isCancelled() {
         return state >= CANCELLED;
     }
@@ -121,6 +111,11 @@ public class FutureTask<V> implements RunnableFuture<V> {
         return state != NEW;
     }
 
+    /**
+     * 取消执行任务，参数控制是否打断执行
+     * true:打断。false:不打断
+     * 使用CAS修改运行状态。
+     */
     public boolean cancel(boolean mayInterruptIfRunning) {
         if (!(state == NEW &&
               UNSAFE.compareAndSwapInt(this, stateOffset, NEW,
@@ -143,17 +138,19 @@ public class FutureTask<V> implements RunnableFuture<V> {
     }
 
     /**
-     * @throws CancellationException {@inheritDoc}
+     * 获取结果，判断任务状态，如果还没执行完，就等待执行完毕。
+     * 最后报告结果
      */
     public V get() throws InterruptedException, ExecutionException {
         int s = state;
         if (s <= COMPLETING)
+            //awaitDone实现了get方法的阻塞，需要重点关注
             s = awaitDone(false, 0L);
         return report(s);
     }
 
     /**
-     * @throws CancellationException {@inheritDoc}
+     * 传递时间参数，get方法有了超时时间
      */
     public V get(long timeout, TimeUnit unit)
         throws InterruptedException, ExecutionException, TimeoutException {
@@ -161,30 +158,20 @@ public class FutureTask<V> implements RunnableFuture<V> {
             throw new NullPointerException();
         int s = state;
         if (s <= COMPLETING &&
+            //这里调用了带时间参数的awaitDone方法
             (s = awaitDone(true, unit.toNanos(timeout))) <= COMPLETING)
             throw new TimeoutException();
         return report(s);
     }
 
     /**
-     * Protected method invoked when this task transitions to state
-     * {@code isDone} (whether normally or via cancellation). The
-     * default implementation does nothing.  Subclasses may override
-     * this method to invoke completion callbacks or perform
-     * bookkeeping. Note that you can query status inside the
-     * implementation of this method to determine whether this task
-     * has been cancelled.
+     * 不多说了，看上面的方法介绍
      */
     protected void done() { }
 
     /**
-     * Sets the result of this future to the given value unless
-     * this future has already been set or has been cancelled.
-     *
-     * <p>This method is invoked internally by the {@link #run} method
-     * upon successful completion of the computation.
-     *
-     * @param v the value
+     * 设置结果，具体看上面的方法介绍
+     * 最后注意它调用了finishCompletion方法
      */
     protected void set(V v) {
         if (UNSAFE.compareAndSwapInt(this, stateOffset, NEW, COMPLETING)) {
@@ -194,16 +181,10 @@ public class FutureTask<V> implements RunnableFuture<V> {
         }
     }
 
-    /**
-     * Causes this future to report an {@link ExecutionException}
-     * with the given throwable as its cause, unless this future has
-     * already been set or has been cancelled.
-     *
-     * <p>This method is invoked internally by the {@link #run} method
-     * upon failure of the computation.
-     *
-     * @param t the cause of failure
-     */
+     /**
+      * 设置异常，具体看上面的方法介绍
+      * 最后注意它调用了finishCompletion方法
+      */
     protected void setException(Throwable t) {
         if (UNSAFE.compareAndSwapInt(this, stateOffset, NEW, COMPLETING)) {
             outcome = t;
@@ -211,7 +192,11 @@ public class FutureTask<V> implements RunnableFuture<V> {
             finishCompletion();
         }
     }
-
+    
+    /**
+     * run方法，判断线程状态，任务状态必须是NEW才可执行任务，否则没效果
+     * 执行成功就set(Result) ，有异常就setException
+     */
     public void run() {
         if (state != NEW ||
             !UNSAFE.compareAndSwapObject(this, runnerOffset,
@@ -246,13 +231,8 @@ public class FutureTask<V> implements RunnableFuture<V> {
     }
 
     /**
-     * Executes the computation without setting its result, and then
-     * resets this future to initial state, failing to do so if the
-     * computation encounters an exception or is cancelled.  This is
-     * designed for use with tasks that intrinsically execute more
-     * than once.
-     *
-     * @return {@code true} if successfully run and reset
+     * 运行并重置，可以看这个任务执行成功后并没有调用set方法，所以任务的状态不会改变。
+     * 只有任务出现异常才会改变任务状态。
      */
     protected boolean runAndReset() {
         if (state != NEW ||
@@ -265,10 +245,10 @@ public class FutureTask<V> implements RunnableFuture<V> {
             Callable<V> c = callable;
             if (c != null && s == NEW) {
                 try {
-                    c.call(); // don't set result
+                    c.call(); // 看这里执行成功后并没有设置结果
                     ran = true;
                 } catch (Throwable ex) {
-                    setException(ex);
+                    setException(ex);//但是有异常时会设置异常
                 }
             }
         } finally {
