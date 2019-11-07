@@ -265,6 +265,7 @@ public class FutureTask<V> implements RunnableFuture<V> {
     }
 
     /**
+     * 这方法我没太看懂
      * Ensures that any interrupt from a possible cancel(true) is only
      * delivered to a task while in run or runAndReset.
      */
@@ -287,9 +288,7 @@ public class FutureTask<V> implements RunnableFuture<V> {
     }
 
     /**
-     * Simple linked list nodes to record waiting threads in a Treiber
-     * stack.  See other classes such as Phaser and SynchronousQueue
-     * for more detailed explanation.
+     * 内部类，一个链表存储所有的等待线程
      */
     static final class WaitNode {
         volatile Thread thread;
@@ -298,8 +297,7 @@ public class FutureTask<V> implements RunnableFuture<V> {
     }
 
     /**
-     * Removes and signals all waiting threads, invokes done(), and
-     * nulls out callable.
+     * 移除所有等待的线程，调用done()方法，然后将Callable置空
      */
     private void finishCompletion() {
         // assert state > COMPLETING;
@@ -327,11 +325,7 @@ public class FutureTask<V> implements RunnableFuture<V> {
     }
 
     /**
-     * Awaits completion or aborts on interrupt or timeout.
-     *
-     * @param timed true if use timed waits
-     * @param nanos time to wait, if timed
-     * @return state upon completion
+     * 阻塞调用线程，直到任务有结果
      */
     private int awaitDone(boolean timed, long nanos)
         throws InterruptedException {
@@ -339,33 +333,39 @@ public class FutureTask<V> implements RunnableFuture<V> {
         WaitNode q = null;
         boolean queued = false;
         for (;;) {
+            //如果线程被打断了，就删除waiter，抛异常
             if (Thread.interrupted()) {
                 removeWaiter(q);
                 throw new InterruptedException();
             }
 
             int s = state;
+            //如果线程的状态>COMPLETING，说明现在执行完了
             if (s > COMPLETING) {
                 if (q != null)
+                    //线程引用置空，早点GC
                     q.thread = null;
                 return s;
             }
-            else if (s == COMPLETING) // cannot time out yet
-                Thread.yield();
+            else if (s == COMPLETING) 
+                Thread.yield();//yield一下，让出CPU
             else if (q == null)
-                q = new WaitNode();
+                q = new WaitNode();//任务执行完毕之前这个线程询问时会创建节点
             else if (!queued)
                 queued = UNSAFE.compareAndSwapObject(this, waitersOffset,
                                                      q.next = waiters, q);
+            //如果有设置超时时间
             else if (timed) {
                 nanos = deadline - System.nanoTime();
                 if (nanos <= 0L) {
                     removeWaiter(q);
                     return state;
                 }
+                //是用LockSupport来实现线程阻塞
                 LockSupport.parkNanos(this, nanos);
             }
             else
+                //没设置超时时间就永远阻塞
                 LockSupport.park(this);
         }
     }
@@ -429,6 +429,24 @@ public class FutureTask<V> implements RunnableFuture<V> {
 ```
 
 ## 样例代码
+为了方便理解，我们写一段代码，使用FutureTask实现一个简单的需求：  
+假如我有一个登录服务集群和一个控制台服务，其中登录服务一共有28个节点，
+每个节点内部都有一个请求次数计数器，并开放了一个HTTP接口(queryInvokeCount)
+供外界查询该
+节点记录的请求次数；控制台服务每30秒调用一次登录服务所有节点的queryInvokeCount
+接口来收集并汇总统计数据。  
+
+针对这种场景，使用多线程和FutureTask，每次启动28个线程去分别去查询28个登录节点的
+请求次数信息，所有线程执行完毕后汇总FutureTask的结果即可。
+>其实这种场景真要用多线程也要使用线程池来做，不过我们主要为了演示FutureTask，所以
+没关系。大家理解一下就好。
+
+
+
+
+
+
+
 
 ## 扩展阅读
 
