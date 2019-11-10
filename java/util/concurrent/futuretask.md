@@ -430,7 +430,7 @@ public class FutureTask<V> implements RunnableFuture<V> {
 
 ## 样例代码
 为了方便理解，我们写一段代码，使用FutureTask实现一个简单的需求：  
-假如我有一个登录服务集群和一个控制台服务，其中登录服务一共有28个节点，
+假如我有一个登录服务集群和一个控制台服务，其中登录服务一共有6个节点，
 每个节点内部都有一个请求次数计数器，并开放了一个HTTP接口(queryInvokeCount)
 供外界查询该
 节点记录的请求次数；控制台服务每30秒调用一次登录服务所有节点的queryInvokeCount
