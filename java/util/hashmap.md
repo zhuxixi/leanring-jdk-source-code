@@ -11,16 +11,16 @@
 这是一个Map接口的哈希表实现。这个实现提供了所有的map操作，允许null值和null键。(HashMap类和Hashtable基本一样，区别是HashMap不是线程安全的
 而且允许null。)这个类不会保证map中元素的顺序； 而且元素的顺序不会一直保持不变，可能随着新元素的添加，顺序就变化了。
 
-This implementation provides constant-time performance for the basic operations (get and put), 
-assuming the hash function disperses the elements properly among the buckets. 
-Iteration over collection views requires time proportional to the "capacity" of the 
-HashMap instance (the number of buckets) plus its size (the number of key-value mappings). 
-Thus, it's very important not to set the initial capacity too high (or the load factor too low) if iteration performance is important.
+假如hash算法足够优秀，没有哈希冲突，这样哈希表中的每个元素都分散在不同的哈希桶中时，那么hashMap的一些基本方法都是O(1)复杂度的，快的一笔(get和put)。
+迭代整个集合的耗时与HashMap的capacity和它的size成正比。因此，如果迭代的性能对你来说很重要，那么不要将initial capacity设置太高(或者负载因子设置太低)
+。
+> 后面会解答原因
 
-An instance of HashMap has two parameters that affect its performance: initial capacity and load factor. 
-The capacity is the number of buckets in the hash table, 
-and the initial capacity is simply the capacity at the time the hash table is created. The load factor is a measure of 
-how full the hash table is allowed to get before its capacity is automatically increased. When the number of entries
+HashMap的两个参数会影响其性能: initial capacity和 load factor(负载因子)
+capacity就是哈希表的桶的数量，initial capacity就是哈希表在创建时的capacity(废话)。
+load factor是测量哈希表是否快满了，然后自动增长它的capacity 
+
+ The load factor is a measure of how full the hash table is allowed to get before its capacity is automatically increased. When the number of entries
  in the hash table exceeds the product of the load factor and the current capacity, the hash table is rehashed 
  (that is, internal data structures are rebuilt) so that the hash table has approximately twice the number of buckets.
 
