@@ -441,6 +441,10 @@ public class FutureTask<V> implements RunnableFuture<V> {
 >其实这种场景真要用多线程也要使用线程池来做，不过我们主要为了演示FutureTask，所以
 没关系。大家理解一下就好。
 
+### 维护一个可靠的服务节点列表
+实现这个场景的第一步，为了保持项目整洁，不引入第三方包，我们需要基于JDK和zookeeper watcher机制自己实现一个简单的服务注册发现的组件。
+要求能够在服务集群发生变化时(集群重启，某个节点挂掉等等)立即刷新服务列表(server metadata list)
+
 
 
 
