@@ -25,16 +25,17 @@ load factor用例测量哈希表的水位，然后自动增长它的capacity。当entry的数量超过`loa
 HashMap要保存的数据量和load factor应该在map初始化时就要去考虑，这样才能减少rehash的次数，因为这是很耗费性能的。
 如果initial capacity 大于entry最大值除以 load factor(`initial capacity> entry count /load factor`)，那么永远都不会发生rehash。
 
-If many mappings are to be stored in a HashMap instance,
- creating it with a sufficiently large capacity will allow the mappings to be stored more efficiently 
- than letting it perform automatic rehashing as needed to grow the table. 
- Note that using many keys with the same hashCode() is a sure way to slow down performance of any hash table.
-  To ameliorate impact, when keys are Comparable, this class may use comparison order among keys to help break ties.
+如果你要保存许多的映射关系到HashMap，初始化HashMap时要指定好足够的capacity，这样可以避免rehash操作。需要注意的一点，如果很多key都有同样的hashCode()
+，就会降低哈希表的性能，因为同样的hashCode()会造成哈希冲突，这样哈希表会退化成链表。
+**这个实现不是线程安全的**。如果多线程并发访问hash map，而且最少有一个线程修改hashMap的数据，它必须先做好同步化处理。
 
-Note that this implementation is not synchronized. If multiple threads access a hash map concurrently, and at least one of the threads modifies the map structurally, it must be synchronized externally. (A structural modification is any operation that adds or deletes one or more mappings; merely changing the value associated with a key that an instance already contains is not a structural modification.) This is typically accomplished by synchronizing on some object that naturally encapsulates the map. If no such object exists, the map should be "wrapped" using the Collections.synchronizedMap method. This is best done at creation time, to prevent accidental unsynchronized access to the map:
+你可以使用 Collections.synchronizedMap方法来制作一个同步的Map。这个方法最好在初始化map时就做好:
 
-   Map m = Collections.synchronizedMap(new HashMap(...));
-The iterators returned by all of this class's "collection view methods" are fail-fast: if the map is structurally modified at any time after the iterator is created, in any way except through the iterator's own remove method, the iterator will throw a ConcurrentModificationException. Thus, in the face of concurrent modification, the iterator fails quickly and cleanly, rather than risking arbitrary, non-deterministic behavior at an undetermined time in the future.
+  ` Map m = Collections.synchronizedMap(new HashMap(...));`
+ 
+if the map is structurally modified at any time after the iterator is created,
+ in any way except through the iterator's own remove method, the iterator will throw a ConcurrentModificationException. 
+ Thus, in the face of concurrent modification, the iterator fails quickly and cleanly, rather than risking arbitrary, non-deterministic behavior at an undetermined time in the future.
 
 Note that the fail-fast behavior of an iterator cannot be guaranteed as it is, generally speaking, impossible to make any hard guarantees in the presence of unsynchronized concurrent modification. Fail-fast iterators throw ConcurrentModificationException on a best-effort basis. Therefore, it would be wrong to write a program that depended on this exception for its correctness: the fail-fast behavior of iterators should be used only to detect bugs.
 
