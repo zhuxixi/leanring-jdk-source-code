@@ -31,15 +31,11 @@ HashMap要保存的数据量和load factor应该在map初始化时就要去考虑，这样才能减少rehas
 
 你可以使用 Collections.synchronizedMap方法来制作一个同步的Map。这个方法最好在初始化map时就做好:
 
-  ` Map m = Collections.synchronizedMap(new HashMap(...));`
- 
-if the map is structurally modified at any time after the iterator is created,
- in any way except through the iterator's own remove method, the iterator will throw a ConcurrentModificationException. 
- Thus, in the face of concurrent modification, the iterator fails quickly and cleanly, rather than risking arbitrary, non-deterministic behavior at an undetermined time in the future.
-
-Note that the fail-fast behavior of an iterator cannot be guaranteed as it is, generally speaking, impossible to make any hard guarantees in the presence of unsynchronized concurrent modification. Fail-fast iterators throw ConcurrentModificationException on a best-effort basis. Therefore, it would be wrong to write a program that depended on this exception for its correctness: the fail-fast behavior of iterators should be used only to detect bugs.
-
-This class is a member of the Java Collections Framework.
+  `Map m = Collections.synchronizedMap(new HashMap(...));`
+如果这个map内部元素在iterator创建之后发生变化(key增减，value变了不算)，除了iterator自己的删除方法之外，其他的方法调用会抛出ConcurrentModificationException。
+隐刺，面对并发修改的情况，iterator是快速失败的。
+你不能依赖这个ConcurrentModificationException异常去开发功能，因为这是不可靠的，还是要从根本上去处理并发问题。
+HashMap是 Java 集合框架的成员之一。
 
 ## 构造器
 
